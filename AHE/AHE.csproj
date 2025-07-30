@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyTitle>Ally Http Engine</AssemblyTitle>
+    <Description>Ally Http Engine to perform Http interations and proccess data from any available server of the HTTP Standard</Description>
+    <Company>Oxoh Engineering</Company>
+    <Copyright>(c) Oxoh Engineering 2025</Copyright>
+    <Authors>Oxoh Engineering | AHE, Anully, Microsoft .Netstandard2.0</Authors>
+    <Product>AllyHttpEngine</Product>
+    <Version>1.2.10.12</Version>
+    <FileVersion>2.0.0.0</FileVersion>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>
