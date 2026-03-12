@@ -51,6 +51,10 @@ sec-ch-ua-platform: "Windows"
 ```
 C# coding:
 ```C#
+	using NElniorPackS;
+	using NElniorPackS.NElniorMimeS;
+	//....
+
 	FileStream fs = new FileStream("response.txt", FileMode.Open);
 	// 13Kb
 	byte[] data = new byte[13312];
