@@ -1,11 +1,10 @@
 using System;
-using System.Net;
 using System.Text;
-using System.Reflection;
+using System.Collections.Generic;
 /*
 	Creation Date: 19 Wed Feb 2025
-	Upgrate date: 18 Fri Jul 2025
-	File version: 1.2
+	Upgrade date: 11 Wed Mar 2026
+	File version: 2.0
 	file author: Elnior Loreh
 	..
 */
@@ -13,211 +12,147 @@ namespace NElniorPackS
 {
 	internal interface IHeaders
 	{
-		string[] this [string anReference]
+		string this [string anReference]
 		{
 			get;
 		}
 	}
 	public struct Headers : IHeaders
 	{
-		public string[] headerKeys;
-		private string[][] headerValues;
-		private readonly string list;
-		public string[] this [string key]
+		public Dictionary<string, string> headers;
+		public string this [string key]
 		{
 			get
 			{
-				string[] col = new string[0];
-				int position = Array.IndexOf<string>(this.headerKeys, key);
-				if (position != -1)
-					col = this.headerValues[position];
-				return col;
+				foreach (string possibleKey in this.headers.Keys)
+					if (possibleKey == key)
+						return this.headers[key];
+				return null;
 			}
 		}
-		public Headers (string[] headerKeys, string[][] headerValues, string list)
+		public Headers (Dictionary<string, string> headers)
 		{
-			this.headerKeys = headerKeys;
-			this.headerValues = headerValues;
-			this.list = list;
+			this.headers = headers;
 		}
 		public override string ToString ()
 		{
-			return this.list;
+			return "Header Count: " + this.headers.Count;
+		}
+	}
+	public struct HReference
+	{
+		public string path, queries;
+		public HReference (string path, string query)
+		{
+			this.path = path;
+			this.queries = query;
 		}
 	}
 	public class RegularLlyna : object
 	{
-		// fields
-		public byte[] body;
+		public int bodyInit;
 		protected bool done;
 		public Headers headers;
-		public static byte[] lastBytesOfHeaders = { 13, 10, 13, 10 };
-		// methods
-		public static int indexOf (byte[] all, byte unit, int position)
-		{
-			int index = -1;
-			for (; position < all.Length; position++)
-			{
-				if (all[position] == unit)
-				{
-					index = position;
-					break;
-				}
-			}
-			return index;
-		}
-		public static int indexOfGroup (byte[] total, byte[] grouped)
-		{
-			int index = -1;
-			if (grouped.Length <= total.Length)
-			{
-				for (int pos = 0; pos < total.Length; pos++)
-				{
-					int successIndex = 0;
-					while (successIndex < grouped.Length && (pos + successIndex) < total.Length)
-					{
-						if (total[pos + successIndex] == grouped[successIndex])
-						{
-							if (successIndex+1 == grouped.Length)
-								return pos;
-						}
-						else
-							break;
-						successIndex++;
-					}
-				}
-			}
-			return index;
-		}
-		public static string ReplaceAll (string original, string part, string newPart)
-		{
-			string replaced = original.Replace(part, newPart);
-			if (replaced.IndexOf(part, 0) != -1)
-				return ReplaceAll(replaced, part, newPart);
-			else
-				return replaced;
-		}
+		public static char[] hexSymbols = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 		public static implicit operator bool (RegularLlyna regularLlynaing)
 		{
 			return regularLlynaing.done;
 		}
 	}
 	// Anully: It's the HTTP request parser
-	public sealed class Anully : RegularLlyna
+	public sealed class Anully : RegularLlyna, IDisposable
 	{
-		public readonly int headerLength;
-		public readonly string htWithVersion;
-		public readonly string method, path;
-		// Improved implementation is available :).
-		public Anully (byte[] ReqData, int limit) : base ()
+		public readonly string method, httpVersionTag;
+		public HReference hReference;
+		public Exception anullyException = null;
+		// Improved version:
+		public Anully (byte[] data, int readed) : base ()
 		{
 			try
 			{
-				this.body = new byte[0];
-				if (limit > 6)
+				this.bodyInit = readed;
+				this.hReference = new HReference(null, null);
+				Dictionary<string, string> headers = new Dictionary<string, string>();
+				this.headers = new Headers(headers);
+				int start = 0, end = Array.IndexOf<byte>(data, 32, start + 1), next = 0;
+				this.method = Encoding.UTF8.GetString(data, start, end).ToLower();
+				start = end + 1;
+				next = Array.IndexOf<byte>(data, 32, start);
+				end = Array.IndexOf<byte>(data, 63, start);
+				if (end == -1 || end >= next)
+					end = next;
+				else
+					this.hReference.queries = Encoding.UTF8.GetString(data, end + 1, next - end - 1);
+				this.hReference.path = Encoding.UTF8.GetString(data, start, end - start);
+				end = next;
+				start = end + 1;
+				end = Array.IndexOf<byte>(data, 13, start + 1);
+				this.httpVersionTag = Encoding.UTF8.GetString(data, start, end - start);
+				start = end + 1;
+				int pgIndex = -1;
+				int indexOfCode = 0, indexOfDigit = 0;
+				int digit, secondDigit;
+				// URI Decoder:
+				while ((pgIndex = this.hReference.path.IndexOf("%", pgIndex + 1)) != -1)
 				{
-					bool isFirst = true;
-					string[] headerKeys = new string[0];
-					string[][] headerValues = new string[0][];
-					
-					string list = "";
-
-					int headerLength = 0;
-					// Where is 13
-					int dx = indexOf(ReqData, 13, headerLength);
-					byte[] eachLine;
-					int start, start2;
-					while (dx != -1)
+					indexOfDigit = pgIndex + 2;
+					for (; indexOfDigit < this.hReference.path.Length; indexOfDigit += 2)
 					{
-						eachLine = new byte[dx - headerLength];
-						start = 0;
-						start2 = headerLength;
-						for (; start < eachLine.Length; start++)
+						digit = Array.IndexOf(hexSymbols, char.ToLower(this.hReference.path[indexOfDigit - 1]));
+						secondDigit = Array.IndexOf(hexSymbols, char.ToLower(this.hReference.path[indexOfDigit]));
+						if (digit != -1 && secondDigit != -1)
 						{
-							eachLine[start] = ReqData[start2];
-							start2++;
-						}
-						// Oh!, It's getting from headerLength variable to dx variable
-						headerLength = dx + 2;
-
-						// --(Important Block to procced headers)-- 0101010101010101..
-						{
-							string line = Encoding.UTF8.GetString(eachLine, 0, eachLine.Length);
-							if(isFirst) 
-							{
-								int spaceIndex = line.IndexOf("\u0020", 0);
-								// first
-								this.method = line.Substring(0, spaceIndex);
-								spaceIndex = line.IndexOf("\u0020", spaceIndex + 1);
-								// second
-								string pth = line.Substring(this.method.Length, spaceIndex - this.method.Length);
-								// And third
-								this.htWithVersion = line.Substring(this.method.Length + pth.Length, line.Length - (this.method.Length + pth.Length)).Trim();
-								
-								this.path = ReplaceAll(pth, "%20", "\u0020");
-								isFirst = false;
-								this.done = true;
-							}
-							else 
-							{
-								int indexForWork = line.IndexOf(":", 0);
-								string key = line.Substring(0, indexForWork).ToLower();
-								indexForWork = key.Length + 1;
-								string theValue = line.Substring(indexForWork, line.Length - indexForWork);
-								// upgrading keys and values
-								string[] total = new string[headerKeys.Length + 1];
-								string[][] total2 = new string[total.Length][];
-								int Position = 0;
-								for (; Position < headerKeys.Length; Position++)
-								{
-									total[Position] = headerKeys[Position];
-									total2[Position] = headerValues[Position];
-
-								}
-								list += key +" ";
-								total[Position] = key;
-								total2[Position] = theValue.Split(",".ToCharArray());
-								headerKeys = total;
-								headerValues = total2;
-							}
-						}
-
-						dx = indexOf(ReqData, 13, headerLength);
-						if (ReqData.Length > dx)
-						{
-							if (ReqData.Length > (dx + 1))
-							{
-								if (ReqData[dx + 2] == 13)
-								{
-									dx += 4;
-									headerLength = dx;
-									if (dx < ReqData.Length)
-									{
-										this.body = new byte[ReqData.Length - dx];
-										int ix = 0;
-										for (; dx < ReqData.Length; dx++)
-										{
-											this.body[ix] = ReqData[dx];
-											ix++;
-										}
-									}
-									else {}
+							data[indexOfCode++] = Convert.ToByte((digit << 4) + secondDigit);
+							indexOfDigit++;
+							if (indexOfDigit < this.hReference.path.Length)
+								if (this.hReference.path[indexOfDigit] != '%')
 									break;
-								}
-							}
+						}
+						else
+							break;
+					}
+					if (indexOfCode > 0)
+						this.hReference.path = this.hReference.path.Replace(this.hReference.path.Substring(pgIndex, indexOfCode * 3), Encoding.UTF8.GetString(data, 0, indexOfCode));
+					indexOfCode = 0;
+				}
+				// Total
+				// 58 ..(ignore 32 when is required).. [13,10] ending
+				// Getting headers.
+				while (start < readed)
+				{
+					end = Array.IndexOf<byte>(data, 58, start + 1);
+					string headerKey = Encoding.UTF8.GetString(data, start, end - start).Trim().ToLower();
+					start = end + 1;
+					end = Array.IndexOf<byte>(data, 13, start + 1);
+					string headerValue = Encoding.UTF8.GetString(data, start, end - start).ToLower();
+					headers.Add(headerKey, headerValue.Trim());
+					start = end + 2;
+					if (start < readed)
+					{
+						// End of headers
+						if (data[start] == 13)
+						{
+							this.bodyInit = start + 2;
+							this.done = true;
+							break;
 						}
 					}
-					this.headerLength = headerLength;
-					this.headers = new Headers(headerKeys, headerValues, list);
 				}
-				else
-					throw new Exception("<Null>");
 			}
-			catch (Exception anException)
+			catch (Exception dataException)
 			{
-				anException.HelpLink = null;
+				this.anullyException = dataException;
 				this.done = false;
 			}
+		}
+		public void Dispose ()
+		{
+			// To clean
+			this.anullyException = null;
+			this.hReference.path = null;
+			this.hReference.queries = null;
+			this.headers.headers.Clear();
+			this.done = false;
 		}
 	}
 }

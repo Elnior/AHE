@@ -1,85 +1,75 @@
 using System;
 using System.Text;
 using NElniorPackS;
+using System.Collections.Generic;
 /*
 	Creation Date: 20 Thu Feb 2025
-	File version: 1.0
+	File version: 2.0
+	Upgrade date: 12 Thu Mar 2026
 	file author: Elnior Loreh
 	..
 */
 namespace NElniorPackS
 {
 	// Ylluna: It's the HTTP/1.1 response parser
-	public sealed class Ylluna : RegularLlyna
+	public sealed class Ylluna : RegularLlyna, IDisposable
 	{
-		public readonly int headerLength;
-		public readonly string statusMessage, htWithVersion;
-		public readonly int statusCode;
-		// Old implementation..
-		public Ylluna (byte[] RespData, int limit) : base()
+		public readonly string statusMessage, httpVersionTag;
+		public readonly short statusCode;
+		public Exception responseMistake = null;
+		// Improved version:
+		public Ylluna (byte[] data, int readed) : base()
 		{
-			int beginIndex = limit + lastBytesOfHeaders.Length;
 			try
 			{
-				this.body = new byte[RespData.Length - limit - lastBytesOfHeaders.Length];
-				this.headerLength = RespData.Length - this.body.Length;
-				if (limit > 3)
+				this.bodyInit = readed;
+				Dictionary<string, string> headers = new Dictionary<string, string>();
+				this.headers = new Headers(headers);
+				int start = 0, end = Array.IndexOf<byte>(data, 32, start + 1);
+				this.httpVersionTag = Encoding.UTF8.GetString(data, start, end);
+				start = end + 1;
+				end = Array.IndexOf<byte>(data, 32, start);
+				this.statusCode = Convert.ToInt16(Encoding.UTF8.GetString(data, start, end - start));
+				start = end + 1;
+				end = Array.IndexOf<byte>(data, 13, start + 1);
+				this.statusMessage = Encoding.UTF8.GetString(data, start, end - start);
+				start = end + 1;
+				// Total
+				// 58 ..(ignore 32 when is required).. [13,10] ending
+				// Getting headers.
+				while (start < readed)
 				{
-					string stringResp = Encoding.UTF8.GetString(RespData, 0, limit);
-					this.done = true;
-					bool isFirst = true;
-					string[] lines = stringResp.Split("\r\n".ToCharArray());
-					string[] headerKeys = new string[0];
-					string[][] headerValues = new string[0][];
-					// I use limit variable again
-					limit = 0;
-					string list = "";
-					foreach (string line in lines)
+					end = Array.IndexOf<byte>(data, 58, start + 1);
+					string headerKey = Encoding.UTF8.GetString(data, start, end - start).Trim().ToLower();
+					start = end + 1;
+					end = Array.IndexOf<byte>(data, 13, start + 1);
+					string headerValue = Encoding.UTF8.GetString(data, start, end - start).ToLower();
+					headers.Add(headerKey, headerValue.Trim());
+					start = end + 2;
+					if (start < readed)
 					{
-						if(isFirst) 
+						// End of headers
+						if (data[start] == 13)
 						{
-							int spaceIndex = line.IndexOf("\u0020", 0);
-							// first
-							this.htWithVersion = line.Substring(0, spaceIndex);
-
-							spaceIndex = line.IndexOf("\u0020", spaceIndex + 1);
-							// second
-							string statusCode = line.Substring(this.htWithVersion.Length, spaceIndex - this.htWithVersion.Length);
-							// And third
-							this.statusMessage = line.Substring(this.htWithVersion.Length + statusCode.Length, line.Length - (this.htWithVersion.Length + statusCode.Length)).Trim();
-							
-							this.statusCode = Convert.ToInt32(statusCode);
-							isFirst = false;
-							headerKeys = new string[lines.Length - 1];
-							headerValues = new string[lines.Length - 1][];
-						}
-						else 
-						{
-							int indexForWork = line.IndexOf(":", 0);
-							string key = line.Substring(0, indexForWork).ToLower();
-							list += key + ((limit == headerKeys.Length-1)? "" : "[..]; ");
-							headerKeys[limit] = key;
-							indexForWork = key.Length + 1;
-							string theValue = line.Substring(indexForWork, line.Length - indexForWork);
-							headerValues[limit] = theValue.Split(",".ToCharArray());
-							limit++;
+							this.bodyInit = start + 2;
+							this.done = true;
+							break;
 						}
 					}
-					int contentIndex = 0;
-					while (contentIndex < this.body.Length)
-					{
-						this.body[contentIndex] = RespData[beginIndex];
-						beginIndex++;
-						contentIndex++;
-					}
-					this.headers = new Headers(headerKeys, headerValues, list);
 				}
 			}
-			catch (Exception anException)
+			catch (Exception responseException)
 			{
-				anException.HelpLink = null;
+				this.responseMistake = responseException;
 				this.done = false;
 			}
+		}
+		public void Dispose ()
+		{
+			// To clean
+			this.responseMistake = null;
+			this.headers.headers.Clear();
+			this.done = false;
 		}
 	}
 }

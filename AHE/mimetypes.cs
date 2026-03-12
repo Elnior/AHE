@@ -1,4 +1,5 @@
-﻿namespace NElniorPackS.NElniorMimeS
+﻿// updated for Elnior at 3 / 8 / 2026 (5:17:00 Pm) date
+namespace NElniorPackS.NElniorMimeS
 {
     public class Mimetypes
     {
@@ -94,13 +95,12 @@
 
             if (position != -1)
             {
-                position = position == -1 ? fileName.Length : position;
                 string format = fileName.Substring(position, fileName.Length - position).ToLower();
-                int limit = (int)(formats.Length / 2);
+                int limit = formats.Length >> 2;
                 for (int idx = 0; idx < limit; idx++)
                 {
                     if (formats[idx, 0] == format)
-                        mime = formats[idx, 1];
+                        return mime = formats[idx, 1];
                 }
             }
             return mime;
