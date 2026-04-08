@@ -66,7 +66,7 @@ namespace NElniorPackS
 		public HReference hReference;
 		public Exception anullyException = null;
 		// Improved version:
-		public Anully (byte[] data, int readed) : base ()
+		public Anully (byte[] data, int start, int readed) : base ()
 		{
 			try
 			{
@@ -74,7 +74,7 @@ namespace NElniorPackS
 				this.hReference = new HReference(null, null);
 				Dictionary<string, string> headers = new Dictionary<string, string>();
 				this.headers = new Headers(headers);
-				int start = 0, end = Array.IndexOf<byte>(data, 32, start + 1), next = 0;
+				int end = Array.IndexOf<byte>(data, 32, start + 1), next = 0;
 				this.method = Encoding.UTF8.GetString(data, start, end).ToLower();
 				start = end + 1;
 				next = Array.IndexOf<byte>(data, 32, start);

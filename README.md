@@ -59,7 +59,7 @@ C# coding:
 	// 13Kb
 	byte[] data = new byte[13312];
 	int readed = fs.Read(data, 0, data.Length);
-	Ylluna ylluna = new Ylluna(data, readed);
+	Ylluna ylluna = new Ylluna(data, 0, readed);
 	if (ylluna)
 	{
 		Console.WriteLine("Response Area:\r\n---------------------------------------------------------");
@@ -77,7 +77,7 @@ C# coding:
 
 	fs = new FileStream("request.txt", FileMode.Open);
 	readed = fs.Read(data, 0, data.Length);
-	Anully anully = new Anully(data, readed);
+	Anully anully = new Anully(data, 0, readed);
 
 	if (anully)
 	{
@@ -94,6 +94,10 @@ C# coding:
 	}
 	else
 		Console.WriteLine("They are mistakes");
+
+	// And get mime:
+	Console.WriteLine(Mimetypes.getMime("text.png"));
+
 ```
 
 > You can use it to build strongs HTTP/S Agents Delegators

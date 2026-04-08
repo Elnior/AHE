@@ -18,14 +18,14 @@ namespace NElniorPackS
 		public readonly short statusCode;
 		public Exception responseMistake = null;
 		// Improved version:
-		public Ylluna (byte[] data, int readed) : base()
+		public Ylluna (byte[] data, int start, int readed) : base()
 		{
 			try
 			{
 				this.bodyInit = readed;
 				Dictionary<string, string> headers = new Dictionary<string, string>();
 				this.headers = new Headers(headers);
-				int start = 0, end = Array.IndexOf<byte>(data, 32, start + 1);
+				int end = Array.IndexOf<byte>(data, 32, start + 1);
 				this.httpVersionTag = Encoding.UTF8.GetString(data, start, end);
 				start = end + 1;
 				end = Array.IndexOf<byte>(data, 32, start);
